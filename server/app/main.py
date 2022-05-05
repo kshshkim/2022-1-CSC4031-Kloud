@@ -10,7 +10,8 @@ import boto3
 import asyncio
 import concurrent.futures
 from .config.cellery_app import da_app
-from .redis_req import set_cred_to_redis, get_cred_from_redis, delete_cred_from_redis, get_cost_cache, set_cost_cache, delete_cache_from_redis
+from .redis_req import set_cred_to_redis, get_cred_from_redis, delete_cred_from_redis, get_cost_cache, set_cost_cache, \
+    delete_cache_from_redis
 
 app = FastAPI()
 aws_info = boto3.Session()
@@ -152,6 +153,21 @@ async def cost_history_by_resource(user_id=Depends(get_user_id)):
 @app.get("/infra/tree")
 async def infra_tree(user_client=Depends(get_user_client)):
     return await user_client.get_infra_tree()
+
+
+class InstanceStop(BaseModel):
+    instance_id: str
+    hibernate: bool
+    force: bool
+
+
+@app.post("/mod/instance/stop")
+async def stop_instance(req_body: InstanceStop, user_client: KloudClient = Depends(get_user_client)):
+    await asyncio.to_thread(user_client.stop_instance,
+                            instance_id=req_body.instance_id,
+                            hibernate=req_body.hibernate,
+                            force=req_body.force)
+    return 'request sent'  # todo 요청 결과 반환
 
 
 @app.post("/logout")

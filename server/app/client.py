@@ -101,6 +101,14 @@ class KloudClient:
     async def get_current_infra_dict(self) -> dict:
         return await self._update_resource_dict()
 
+    def stop_instance(self, instance_id: str, hibernate: bool, force: bool) -> None:
+        self._ec2_client.stop_instances(
+            InstanceIds=[instance_id],
+            Hibernate=hibernate,
+            DryRun=True,
+            Force=force
+        )
+
     async def get_cost_history(self, time_period: dict, granularity: str) -> dict:
         fun = functools.partial(self._ce_client.get_cost_and_usage,
                                 TimePeriod=time_period,
