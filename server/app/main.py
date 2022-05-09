@@ -169,6 +169,14 @@ async def stop_instance(req_body: InstanceStop, user_client: KloudClient = Depen
                             force=req_body.force)
     return 'request sent'  # todo 요청 결과 반환
 
+class InstanceStart(BaseModel):
+    instance_id: str
+
+@app.post("/mod/instance/start")
+async def start_instance(req_body: InstanceStart, user_client: KloudClient = Depends(get_user_client)):
+    await asyncio.to_thread(user_client.start_instance, instance_id=req_body.instance_id)
+
+    return 'request sent'
 
 @app.post("/logout")
 async def logout(user_id=Depends(get_user_id), token=Depends(security)):

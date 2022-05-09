@@ -101,6 +101,11 @@ class KloudClient:
     async def get_current_infra_dict(self) -> dict:
         return await self._update_resource_dict()
 
+    def start_instance(self, instance_id: str) -> None:
+        self._ec2_client.start_instances(
+            InstanceIds=[instance_id]
+        )
+
     def stop_instance(self, instance_id: str, hibernate: bool, force: bool) -> None:
         self._ec2_client.stop_instances(
             InstanceIds=[instance_id],
