@@ -26,7 +26,7 @@ async def cost_history_param(user_id=Depends(get_user_id),
     cost_history = await get_cost_cache(key)
     if cost_history is None:
         user_client = await get_user_client(user_id)
-        cost_history: dict = await user_client.get_cost_history(days=q.days, granularity=q.granularity)
+        cost_history: dict = await user_client.cost_explorer.get_cost_history(days=q.days, granularity=q.granularity)
         asyncio.create_task(set_cost_cache(key, cost_history))
     else:
         print(f'cache hit {user_id=}')
@@ -51,30 +51,30 @@ async def cost_history_by_resource(user_id=Depends(get_user_id),
     specific: true|false, default false, usage type and quantity 나누어 세부적으로 출력
     """
     user_client = await get_user_client(user_id)
-    return await user_client.get_cost_history_by_instances(show_usage_type_and_quantity=q.specific,
-                                                           granularity=q.granularity)
+    return await user_client.cost_explorer.get_cost_history_by_instances(show_usage_type_and_quantity=q.specific,
+                                                                         granularity=q.granularity)
 
 
 @router.get("/history/by-service")
 async def cost_history_by_service(user_client: KloudClient = Depends(get_user_client),
                                   q: CostHistoryByService = Depends()):
-    return await user_client.get_cost_history_by_service(days=q.days)
+    return await user_client.cost_explorer.get_cost_history_by_service(days=q.days)
 
 
 @router.get("/recommendation/reservation")
 async def reservation_recommendation(user_client: KloudClient = Depends(get_user_client),
                                      q: ReservationRecommendation = Depends()
                                      ) -> dict:
-    return await user_client.async_get_reservation_recommendation(q.service,
-                                                                  q.look_back_period,
-                                                                  q.years,
-                                                                  q.payment_option)
+    return await user_client.cost_explorer.async_get_reservation_recommendation(q.service,
+                                                                                q.look_back_period,
+                                                                                q.years,
+                                                                                q.payment_option)
 
 
 @router.get("/recommendation/rightsizing")
 async def rightsizing_recommendation(user_client: KloudClient = Depends(get_user_client),
                                      q: RightSizingRecommendation = Depends()):
-    return await user_client.async_get_rightsizing_recommendation(
+    return await user_client.cost_explorer.async_get_rightsizing_recommendation(
         within_same_instance_family=q.within_same_instance_family,
         benefits_considered=q.benefits_considered)
 

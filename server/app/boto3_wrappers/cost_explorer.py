@@ -74,6 +74,7 @@ class KloudCostExplorer(KloudBoto3Wrapper):
                                                 describing_method=self.session.client("ec2").describe_instances)
 
         resource_id_list = list(ec2_dict.keys())  # ec2 이외 다른 리소스도 조회가 가능할 경우, 키만 가져와서 합치면 됨.
+
         metrics = ['UnblendedCost']
         group_by = [{'Type': 'DIMENSION', 'Key': 'RESOURCE_ID'}]
 

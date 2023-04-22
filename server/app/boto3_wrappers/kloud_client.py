@@ -76,22 +76,29 @@ class InfraTreeBuilder:
         return to_return
 
 
-class KloudClient(KloudEC2, KloudRDS, KloudECS, KloudELB, KloudCloudWatch, KloudCostExplorer):
+class KloudClient:
     def __init__(self, access_key_id: str, session_instance: boto3.Session):
-        super().__init__(session_instance)
         self.id: str = access_key_id
-        self.describing_coroutines: list = [  # 리스트 요소들은 coroutine
-            self.get_ec2_resources,
-            self.get_rds_resources,
-            self.get_ecs_resources,
-            self.get_load_balancers
-        ]
+        self.ec2 = KloudEC2(session_instance)
+        self.rds = KloudRDS(session_instance)
+        self.ecs = KloudECS(session_instance)
+        self.elb = KloudELB(session_instance)
+
+        self.cloud_watch = KloudCloudWatch(session_instance)
+        self.cost_explorer = KloudCostExplorer(session_instance)
+
+        self.resource_clients: dict = {
+            "ec2": self.ec2,
+            "rds": self.rds,
+            "ecs": self.ecs,
+            "elb": self.elb,
+        }
 
     async def get_current_infra_dict(self) -> dict:
         to_return = dict()
         tasks = list()
-        for task in self.describing_coroutines:
-            tasks.append(task())  # coroutine await 하지 않고 실행 후 리스트에 넣음.
+        for client in self.resource_clients.values():
+            tasks.append(client.describe())  # describe는 코루틴 await 하지 않고 실행 후 리스트에 넣음.
         done, pending = await asyncio.wait(tasks)  # 코루틴 한꺼번에 await. pending은 asyncio 리턴값 형식 때문에 필요. 사용 x.
         for task in done:
             to_return.update(task.result())  # 받아온 인프라 정보들 모두 한 딕셔너리에 합침.
@@ -105,8 +112,9 @@ class KloudClient(KloudEC2, KloudRDS, KloudECS, KloudELB, KloudCloudWatch, Kloud
 
     async def get_top_3_usage_average(self) -> dict:
         to_return = dict()
-        top3_with_cost = await self.get_total_cost_by_instance_with_top_3_usage()
+        top3_with_cost = await self.cost_explorer.get_total_cost_by_instance_with_top_3_usage()
         for resource_id in top3_with_cost['top3']:
-            average_utilization = await self.async_get_resource_utilization(resource_id)
+            average_utilization = await self.cloud_watch.async_get_resource_utilization(resource_id)
             to_return[resource_id] = average_utilization
         return to_return
+

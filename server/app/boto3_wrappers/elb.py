@@ -8,7 +8,7 @@ class KloudELB(KloudBoto3Wrapper):
         super().__init__(session_instance)
         self._elb_cli = session_instance.client('elbv2')
 
-    async def get_load_balancers(self) -> dict:
+    async def describe(self) -> dict:
         to_return = await self.fetch_and_process_async('LoadBalancerArn',
                                                        self._elb_cli.describe_load_balancers)
         return to_return
