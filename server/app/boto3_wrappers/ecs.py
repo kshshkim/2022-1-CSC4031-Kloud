@@ -36,7 +36,7 @@ class KloudECS(KloudBoto3Wrapper):
             to_return = await self.fetch_and_process_async('serviceArn', describing_method)
         return to_return
 
-    async def get_ecs_resources(self) -> dict:
+    async def describe(self) -> dict:
         to_return = dict()
         clusters = await self._get_clusters()
         services = dict()

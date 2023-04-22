@@ -59,7 +59,7 @@ class KloudEC2(KloudBoto3Wrapper):
                     to_return[key] = val
         return to_return
 
-    async def get_ec2_resources(self) -> dict:
+    async def describe(self) -> dict:
         return await self._update_resource_dict()
 
     def start_instance(self, instance_id: str) -> None:
