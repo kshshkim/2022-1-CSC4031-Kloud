@@ -17,6 +17,7 @@ router = APIRouter(prefix="/cost",
 
 @router.get("/history/param")
 async def cost_history_param(user_id=Depends(get_user_id),
+                             user_client=Depends(get_user_client),
                              q: CostHistory = Depends()
                              ) -> dict:
     """
@@ -25,7 +26,6 @@ async def cost_history_param(user_id=Depends(get_user_id),
     key = f'{user_id}_{q.granularity}_{q.days}'
     cost_history = await get_cost_cache(key)
     if cost_history is None:
-        user_client = await get_user_client(user_id)
         cost_history: dict = await user_client.cost_explorer.get_cost_history(days=q.days, granularity=q.granularity)
         asyncio.create_task(set_cost_cache(key, cost_history))
     else:
@@ -34,23 +34,22 @@ async def cost_history_param(user_id=Depends(get_user_id),
 
 
 @router.get("/history/default")
-async def cost_history_default(user_id=Depends(get_user_id)):
+async def cost_history_default(user_id=Depends(get_user_id), user_client=Depends(get_user_client)):
     """
     deprecated
     cost_history_param 사용할것.
     """
     c: CostHistory = CostHistory(granularity='DAILY', days=90)
-    return await cost_history_param(user_id=user_id, q=c)
+    return await cost_history_param(user_id=user_id, user_client=user_client, q=c)
 
 
 @router.get("/history/by-resource")
-async def cost_history_by_resource(user_id=Depends(get_user_id),
+async def cost_history_by_resource(user_client=Depends(get_user_client),
                                    q: CostHistoryByResource = Depends()
                                    ):
     """
     specific: true|false, default false, usage type and quantity 나누어 세부적으로 출력
     """
-    user_client = await get_user_client(user_id)
     return await user_client.cost_explorer.get_cost_history_by_instances(show_usage_type_and_quantity=q.specific,
                                                                          granularity=q.granularity)
 
@@ -104,13 +103,13 @@ async def wait_until_done(celery_task: da_app.AsyncResult, interval=0.3, timeout
 
 
 @router.get("/trend/similarity")
-async def pattern_finder(user_client=Depends(get_user_id), token=Depends(security)):
+async def pattern_finder(user_id=Depends(get_user_id), token=Depends(security)):
     task = da_app.send_task("/cost/trend/similarity", [token.credentials])
     return await wait_until_done(task)  # 비동기 실행, 결과값 체크 예시
 
 
 @router.get("/trend/prophet")
-async def pattern_finder2(user_client=Depends(get_user_id), token=Depends(security),
+async def pattern_finder2(user_id=Depends(get_user_id), token=Depends(security),
                           q: TrendProphet = Depends()
                           ):
     """

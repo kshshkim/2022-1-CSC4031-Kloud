@@ -77,8 +77,7 @@ class InfraTreeBuilder:
 
 
 class KloudClient:
-    def __init__(self, access_key_id: str, session_instance: boto3.Session):
-        self.id: str = access_key_id
+    def __init__(self, session_instance: boto3.Session):
         self.ec2 = KloudEC2(session_instance)
         self.rds = KloudRDS(session_instance)
         self.ecs = KloudECS(session_instance)

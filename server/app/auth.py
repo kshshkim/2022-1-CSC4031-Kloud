@@ -11,8 +11,7 @@ import boto3
 
 from .response_exceptions import CredentialsException
 from .config.token_conf import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
-from .redis_req import add_revoked_redis, is_member_revoked_redis
-
+from .scheme import KloudJWT, KloudAwsCred
 
 security = HTTPBearer(scheme_name='bearer')
 
@@ -23,65 +22,65 @@ def build_token(user_id: str) -> dict:
     }
 
 
-def create_access_token(user_id: str, expires_delta: Optional[timedelta] = None) -> str:
-    to_encode = build_token(user_id=user_id)
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)  # config 참조
-    to_encode.update({"exp": expire})  # 토큰 유효기간
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+# todo
+def encrypt(string: str) -> str:
+    return string
+
+
+# todo
+def decrypt(string: str) -> str:
+    return string
+
+
+def create_access_token(user_id: str, cred: KloudAwsCred, expires_delta: Optional[timedelta] = None) -> str:
+    now = datetime.utcnow()
+    expire = now + expires_delta if expires_delta else now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode: dict = KloudJWT(user_id=user_id, iat=now, exp=expire, encrypted=encrypt(cred.json())).dict()
+
+    encoded_jwt: str = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt  # 인코딩된 jwt 반환
-
-
-async def revoke_token(token: str) -> None:
-    await add_revoked_redis(token)
-
-
-async def is_revoked(token: str) -> bool:
-    return await is_member_revoked_redis(token)
 
 
 class AccessTokenForm(BaseModel):
     access_token: str
 
 
-def request_temp_cred(session_obj: boto3.Session, region: str) -> dict:
-    """
-    return
+def request_temp_cred(session_obj: boto3.Session, region: str) -> KloudAwsCred:
+    sts_cli = session_obj.client('sts')  # 임시 토큰 발급
+    response: dict = sts_cli.get_session_token()
+    """ response
     {
     'AccessKeyId': 'some-id',
     'SecretAccessKey': 'some-secret',
-    'SessionToken': 'some-token',
-    'region': 'some-region'
+    'SessionToken': 'some-token'
+    ...
     }
     """
-    sts_cli = session_obj.client('sts')  # 임시 토큰 발급
-    response = sts_cli.get_session_token()
+
     cred = response['Credentials']
-    cred['region'] = region
-    cred.pop('Expiration')  # datetime.datetime json serialize 불가
-    return cred
+
+    return KloudAwsCred(aws_access_key_id=cred['AccessKeyId'],
+                        aws_secret_access_key=cred['SecretAccessKey'],
+                        aws_session_token=cred['SessionToken'],
+                        region_name=region)
 
 
-async def async_request_temp_cred(session_obj: boto3.Session, region: str) -> dict:
+async def async_request_temp_cred(session_obj: boto3.Session, region: str) -> KloudAwsCred:
     fun = functools.partial(request_temp_cred, session_obj=session_obj, region=region)
     return await asyncio.to_thread(fun)
 
 
-def create_temp_session(cred: dict) -> boto3.Session:
-    return boto3.Session(aws_access_key_id=cred['AccessKeyId'],
-                         aws_secret_access_key=cred['SecretAccessKey'],
-                         aws_session_token=cred['SessionToken'],
-                         region_name=cred['region'])
+def create_temp_session(cred: KloudAwsCred) -> boto3.Session:
+    return boto3.Session(aws_access_key_id=cred.aws_access_key_id,
+                         aws_secret_access_key=cred.aws_secret_access_key,
+                         aws_session_token=cred.aws_session_token,
+                         region_name=cred.region_name)
 
 
-async def validate_and_decode_access_token(auth_header: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+async def validate_and_decode_access_token(auth_header: HTTPAuthorizationCredentials = Depends(security)) -> KloudJWT:
     try:
         payload = jwt.decode(auth_header.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        if await is_member_revoked_redis(auth_header.credentials):  # token revoke 여부 확인
-            raise CredentialsException
+        decoded: KloudJWT = KloudJWT(**payload)
     except JWTError:
         raise CredentialsException
-    return payload
-
+    return decoded

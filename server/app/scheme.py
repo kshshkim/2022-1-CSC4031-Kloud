@@ -1,6 +1,7 @@
+import datetime
 from enum import Enum
-
 from pydantic import BaseModel, conint, validator
+from typing import Any, Union
 
 MAXIMUM_DAYS = 180
 MAXIMUM_DAYS_HOURLY = 14
@@ -78,3 +79,17 @@ class TrendProphet(KloudBaseModel):
     daily_seasonality: bool = True
     n_changepoints: int = 7
     period: int = 5
+
+
+class KloudAwsCred(KloudBaseModel):
+    aws_access_key_id: str
+    aws_secret_access_key: str
+    aws_session_token: str
+    region_name: str
+
+
+class KloudJWT(KloudBaseModel):
+    iat: Union[int, datetime.datetime]
+    exp: Union[int, datetime.datetime]
+    user_id: str
+    encrypted: str
