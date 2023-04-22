@@ -28,7 +28,12 @@ PaymentOptions: Enum = gen_enum(PAYMENT_OPTIONS)
 TermInYears: Enum = gen_enum(TERM_IN_YEARS)
 
 
-class CostHistory(BaseModel):
+class KloudBaseModel(BaseModel):
+    class Config:
+        use_enum_values = True
+
+
+class CostHistory(KloudBaseModel):
     granularity: Granularity = 'DAILY'
     days: conint(ge=1, le=MAXIMUM_DAYS) = 90
 
@@ -42,23 +47,17 @@ class CostHistory(BaseModel):
                 f"ValueError: days cannot exceed {maximum_days_available} with granularity {values.get('granularity')}")
         return v
 
-    class Config:
-        use_enum_values = True
 
-
-class CostHistoryByResource(BaseModel):
+class CostHistoryByResource(KloudBaseModel):
     specific: bool = False
     granularity: Granularity = 'MONTHLY'
 
-    class Config:
-        use_enum_values = True
 
-
-class CostHistoryByService(BaseModel):
+class CostHistoryByService(KloudBaseModel):
     days: conint(ge=1, le=MAXIMUM_DAYS) = 90
 
 
-class ReservationRecommendation(BaseModel):
+class ReservationRecommendation(KloudBaseModel):
     service: AvailableReservation
     look_back_period: AvailableLookBackPeriod
     years: TermInYears
@@ -68,12 +67,12 @@ class ReservationRecommendation(BaseModel):
         use_enum_values = True
 
 
-class RightSizingRecommendation(BaseModel):
+class RightSizingRecommendation(KloudBaseModel):
     within_same_instance_family: bool = True
     benefits_considered: bool = True
 
 
-class TrendProphet(BaseModel):
+class TrendProphet(KloudBaseModel):
     yearly_seasonality: bool = False
     weekly_seasonality: bool = True
     daily_seasonality: bool = True
