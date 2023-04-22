@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
 
-from ..boto3_wrappers.kloud_client import KloudClient
+from ..boto3_wrappers.kloud_client import KloudClient, KloudNoResourceFound
 from ..dependencies import get_user_client
+from ..response_exceptions import ResourcesNotExists
 
 router = APIRouter(prefix="/infra",
                    tags=["infra"])
@@ -22,4 +23,7 @@ async def infra_tree(user_client: KloudClient = Depends(get_user_client)):
 
 @router.get("/top3")
 async def top3_instances_utilization_average(user_client: KloudClient = Depends(get_user_client)):
-    return await user_client.get_top_3_usage_average()
+    try:
+        return await user_client.get_top_3_usage_average()
+    except KloudNoResourceFound:
+        raise ResourcesNotExists

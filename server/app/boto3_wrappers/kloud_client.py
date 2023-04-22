@@ -1,7 +1,7 @@
 import asyncio
 import boto3
 
-from .cost_explorer import KloudCostExplorer
+from .cost_explorer import KloudCostExplorer, KloudNoResourceFound
 from .rds import KloudRDS
 from .ec2 import KloudEC2
 from .ecs import KloudECS

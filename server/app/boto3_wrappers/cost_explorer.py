@@ -26,6 +26,10 @@ PAYMENT_OPTIONS = ['NO_UPFRONT', 'PARTIAL_UPFRONT', 'ALL_UPFRONT', 'LIGHT_UTILIZ
 TERM_IN_YEARS = ['ONE_YEAR', 'THREE_YEARS']
 
 
+class KloudNoResourceFound(Exception):
+    pass
+
+
 class KloudCostExplorer(KloudBoto3Wrapper):
     def __init__(self, session_instance: boto3.Session):
         super().__init__(session_instance)
@@ -74,6 +78,9 @@ class KloudCostExplorer(KloudBoto3Wrapper):
                                                 describing_method=self.session.client("ec2").describe_instances)
 
         resource_id_list = list(ec2_dict.keys())  # ec2 이외 다른 리소스도 조회가 가능할 경우, 키만 가져와서 합치면 됨.
+
+        if not resource_id_list:
+            raise KloudNoResourceFound("resource id list is empty")
 
         metrics = ['UnblendedCost']
         group_by = [{'Type': 'DIMENSION', 'Key': 'RESOURCE_ID'}]
@@ -163,7 +170,8 @@ class KloudCostExplorer(KloudBoto3Wrapper):
 
         return {"RightsizingRecommendations": recommendation["RightsizingRecommendations"]}
 
-    async def async_get_rightsizing_recommendation(self, within_same_instance_family: bool, benefits_considered: bool) -> dict:
+    async def async_get_rightsizing_recommendation(self, within_same_instance_family: bool,
+                                                   benefits_considered: bool) -> dict:
         return await asyncio.to_thread(self._get_rightsizing_recommendation,
                                        within_same_instance_family=within_same_instance_family,
                                        benefits_considered=benefits_considered)
