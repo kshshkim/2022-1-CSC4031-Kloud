@@ -9,6 +9,8 @@ services:
     build: server
     ports:
       - "8000:8000"
+    volumes:
+      - ./server/app:/app
     depends_on:
       - kloud_redis
       - kloud_celery
